@@ -1,0 +1,187 @@
+import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.SlingHttpServletResponse;
+import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.servlets.ServletResolverConstants;
+import org.apache.sling.query.QueryBuilder;
+import org.apache.sling.query.Query;
+import org.apache.sling.query.PredicateGroup;
+import org.apache.sling.query.Hit;
+import org.apache.sling.api.servlets.HttpConstants;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import javax.jcr.Session;
+import javax.jcr.Node;
+import javax.servlet.Servlet;
+import javax.servlet.ServletContext;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Component(service = Servlet.class,
+        property = {
+                "service.description=Download report of users with group name",
+                "service.vendor=Etrade",
+                ServletResolverConstants.SLING_SERVLET_PATHS + "=/bin/servlet/usergroupreport",
+                ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
+        })
+public class UserReportGroupsServlet extends SlingSafeMethodsServlet {
+
+    private static final long serialVersionUID = 1L;
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserReportGroupsServlet.class);
+
+    @Reference
+    private QueryBuilder queryBuilder;
+
+    @Override
+    protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response) throws IOException {
+        response.setContentType("text/csv");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            LOGGER.debug("Servlet Called");
+            ResourceResolver resourceResolver = request.getResourceResolver();
+            Session session = resourceResolver.adaptTo(Session.class);
+            LOGGER.debug("Resource Resolver obtained");
+
+            Map<String, String> queryMap = new HashMap<>();
+            queryMap.put("p.hits", "selective");
+            queryMap.put("p.limit", "-1");
+            queryMap.put("p.properties", "rep:authorizableId, rep:externalId, jcr:path");
+            queryMap.put("path", "/home/users/etrade");
+            queryMap.put("type", "rep:User");
+
+            Query query = queryBuilder.createQuery(PredicateGroup.create(queryMap), session);
+            List<Hit> hits = query.getResult().getHits();
+            List<UserGroupReport> userGroupReports = new ArrayList<>();
+
+            for (Hit hit : hits) {
+                String principalName = "";
+                String[] groups = new String[0];
+                String domain = "";
+                String familyName = "";
+                String givenName = "";
+                String email = "";
+
+                UserGroupReport userGroupReport = new UserGroupReport();
+                Resource resource = hit.getResource();
+                ValueMap componentProperties = resource.getValueMap();
+                Node hitNode = hit.getNode();
+
+                if (hitNode.hasNode("profile")) {
+                    Node profileNode = hitNode.getNode("profile");
+
+                    if (profileNode.hasProperty("groups")) {
+                        groups = profileNode.getProperty("groups").getValues();
+                        userGroupReport.setGroups(groups);
+                        for (int i = 0; i < groups.length; i++) {
+                            LOGGER.debug("PROPERTIES GROUP: {}", groups[i].getString());
+                        }
+                    }
+
+                    if (profileNode.hasProperty("familyName")) {
+                        familyName = profileNode.getProperty("familyName").getString();
+                        userGroupReport.setFamilyName(familyName);
+                        LOGGER.debug("PROPERTIES FAMILY NAME: {}", familyName);
+                    }
+
+                    if (profileNode.hasProperty("givenName")) {
+                        givenName = profileNode.getProperty("givenName").getString();
+                        userGroupReport.setGivenName(givenName);
+                        LOGGER.debug("PROPERTIES GIVEN NAME: {}", givenName);
+                    }
+
+                    if (profileNode.hasProperty("email")) {
+                        email = profileNode.getProperty("email").getString();
+                        userGroupReport.setEmail(email);
+                        LOGGER.debug("PROPERTIES EMAIL: {}", email);
+
+                        domain = email.split("@")[1];
+                        userGroupReport.setDomain(domain);
+                        LOGGER.debug("PROPERTIES DOMAIN: {}", domain);
+                    }
+
+                    LOGGER.debug("PATH: {}", resource.getPath());
+                    principalName = componentProperties.get("rep:principalName", String.class);
+                    LOGGER.debug("Principal Name: {}", principalName);
+                    userGroupReport.setPrincipalName(principalName);
+
+                    userGroupReports.add(userGroupReport);
+                }
+            }
+
+            String fileName = fileName("users.export.group") + ".csv";
+            File myFile = new File(fileName);
+            try (PrintWriter writer = new PrintWriter(new FileWriter(myFile))) {
+                writer.println("Name,Group,Domain,Family Name,Given Name,Email");
+
+                for (UserGroupReport ugr : userGroupReports) {
+                    String[] groupValues = ugr.getGroups();
+
+                    for (String group : groupValues) {
+                        writer.printf("%s,%s,%s,%s,%s,%s%n",
+                                ugr.getPrincipalName(),
+                                group,
+                                ugr.getDomain(),
+                                ugr.getFamilyName(),
+                                ugr.getGivenName(),
+                                ugr.getEmail());
+                    }
+                }
+            }
+
+            LOGGER.debug("FILE Has Been Created: {}", myFile.getAbsolutePath());
+
+            File downloadFile = new File(myFile.getAbsolutePath());
+            FileInputStream inStream = new FileInputStream(downloadFile);
+
+            ServletContext context = getServletContext();
+            String mimeType = context.getMimeType(myFile.getAbsolutePath());
+            if (mimeType == null) {
+                mimeType = "text/csv";
+            }
+
+            response.setContentType(mimeType);
+            response.setContentLength((int) downloadFile.length());
+
+            String headerKey = "Content-Disposition";
+            String headerValue = String.format("attachment; filename=\"%s\"", downloadFile.getName());
+            response.setHeader(headerKey, headerValue);
+
+            OutputStream outStream = response.getOutputStream();
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+
+            while ((bytesRead = inStream.read(buffer)) != -1) {
+                outStream.write(buffer, 0, bytesRead);
+            }
+
+            inStream.close();
+            outStream.close();
+
+        } catch (Exception e) {
+            LOGGER.error("Exception occurred:", e);
+            response.setStatus(SlingHttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("ERROR");
+        }
+    }
+
+    private String fileName(String fileName) {
+        Date date = new Date();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
+        return fileName + dateFormat.format(date);
+    }
+}
