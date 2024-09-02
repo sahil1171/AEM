@@ -18,5 +18,13 @@ function downloadGroupCsv() {
             }
         };
 
+
+
+var checkbox = document.getElementById('groupexport');
+
+        if (checkbox.checked) {
+            // Call the servlet to download the group report
+            downloadGroupCsv();
+
         xhr.send();
     }
