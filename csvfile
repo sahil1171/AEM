@@ -1,0 +1,22 @@
+function exportCSV() {
+    var isGroupReportChecked = document.getElementById("groupexport").checked;
+
+    if (isGroupReportChecked) {
+        // If the checkbox is checked, call the AEM servlet to download the CSV
+        window.location.href = '/bin/servlet';
+    } else {
+        // If the checkbox is not checked, proceed with the normal CSV export process
+        var rep = CQ.reports.Report.theInstance;
+        var repurl = rep.reportPath + '.' + rep.reportSelector + CQ.HTTP.EXTENSION_JSON;
+
+        CQ.HTTP.get(repurl, function(options, success, response) {
+            if (success) {
+                var repData = CQ.Util.formatData(CQ.Ext.util.JSON.decode(response.responseText)); 
+                var csv = 'result,' + repData.results + '\r\n';
+                findClientFilter(rep);
+                csv += json2csv(normalizeRows(CQ.Ext.util.JSON.encode(repData.hits), Object.keys(repData.dataTypes)));
+                downloadcsv(csv);
+            }
+        }, this);
+    }
+}
