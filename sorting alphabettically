@@ -1,0 +1,3 @@
+List<UserGroupReport> sortedUserGroupReports = userGroupReports.stream()
+    .sorted(Comparator.comparing(UserGroupReport::getPrincipalName))
+    .toList();
