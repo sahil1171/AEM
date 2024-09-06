@@ -107,3 +107,39 @@ function exportCSV() {
 </div>
  
 </body>
+
+
+=========================================
+
+ (function(document, $) {
+    "use strict";
+
+    // Function to validate MSID field
+    function validateMsidField() {
+        // Select the MSID field using the custom class
+        var msidField = $(".js-msid-uppercase");
+
+        // On input or change event, validate the value
+        msidField.on("input change", function() {
+            var value = msidField.val();  // Get the field value
+            var regex = /^[A-Z0-9]+$/;    // Regex for uppercase letters and numbers only
+
+            // Check if the value matches the regex
+            if (!regex.test(value)) {
+                // If invalid, show error message and mark field as invalid
+                msidField[0].setCustomValidity("MSID must contain only uppercase letters and numbers.");
+                msidField.addClass("is-invalid");
+            } else {
+                // If valid, clear error message and mark field as valid
+                msidField[0].setCustomValidity("");
+                msidField.removeClass("is-invalid");
+            }
+        });
+    }
+
+    // When the dialog is ready, initialize the validation
+    $(document).on("foundation-contentloaded", function() {
+        validateMsidField();
+    });
+
+})(document, Granite.$);
