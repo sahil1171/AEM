@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+          xmlns:granite="http://www.adobe.com/jcr/granite/1.0"
+          jcr:primaryType="nt:unstructured"
+          jcr:title="Contact Us Component"
+          sling:resourceType="og/gui/components/authoring/dialog">
+
+    <content jcr:primaryType="nt:unstructured"
+             sling:resourceType="granite/ui/components/coral/foundation/fixedcolumns">
+        
+        <items jcr:primaryType="nt:unstructured">
+
+            <tab jcr:primaryType="nt:unstructured"
+                 sling:resourceType="granite/ui/components/coral/foundation/tabs"
+                 maximized="{Boolean}true">
+                 
+                <items jcr:primaryType="nt:unstructured">
+                    <column jcr:primaryType="nt:unstructured"
+                            jcr:title="Properties"
+                            sling:resourceType="granite/ui/components/coral/foundation/container">
+
+                        <items jcr:primaryType="nt:unstructured">
+                            <heading jcr:primaryType="nt:unstructured"
+                                     sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                     emptyText="Give Heading"
+                                     fieldLabel="Heading"
+                                     name="./heading"
+                                     required="{Boolean}true" />
+
+                            <layout granite:class="cq-dialog-dropdown-showhide"
+                                    jcr:primaryType="nt:unstructured"
+                                    sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                    fieldLabel="Layout"
+                                    name="./layout">
+
+                                <items jcr:primaryType="nt:unstructured">
+                                    <option1 jcr:primaryType="nt:unstructured"
+                                             text="Select Layout"
+                                             value="blank" />
+
+                                    <option2 jcr:primaryType="nt:unstructured"
+                                             text="Horizontal"
+                                             value="horizontal" />
+
+                                    <option3 jcr:primaryType="nt:unstructured"
+                                             text="Vertical"
+                                             value="vertical" />
+                                </items>
+                            </layout>
+
+                            <field jcr:primaryType="nt:unstructured"
+                                   sling:resourceType="granite/ui/components/coral/foundation/container"
+                                   name="./contactDetails">
+
+                                <items jcr:primaryType="nt:unstructured">
+
+                                    <msid jcr:primaryType="nt:unstructured"
+                                          granite:class="convert-uppercase"
+                                          sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                          emptyText="Give MSID"
+                                          fieldLabel="MSID"
+                                          name="./msid"
+                                          required="{Boolean}true"
+                                          granite:data="js-msid-uppercase"
+                                          granite:validation="{Boolean}true"
+                                          validation="foundation-regex"
+                                          pattern="[A-Z0-9]+$">
+                                        <granite:validation jcr:primaryType="nt:unstructured"
+                                                            message="MSID must be uppercase alphanumeric characters only." />
+                                    </msid>
+
+                                    <analystName jcr:primaryType="nt:unstructured"
+                                                 sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                                 emptyText="Give Analyst Name"
+                                                 fieldLabel="Analyst Name"
+                                                 name="./analystName"
+                                                 required="{Boolean}true" />
+
+                                    <analystProfileUrl jcr:primaryType="nt:unstructured"
+                                                      sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                                      emptyText="Give Analyst Profile URL"
+                                                      fieldLabel="Analyst Profile URL"
+                                                      name="./analystProfileUrl"
+                                                      required="{Boolean}true" />
+
+                                    <analystEmail jcr:primaryType="nt:unstructured"
+                                                  sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                                  emptyText="Give Analyst Email"
+                                                  fieldLabel="Analyst Email"
+                                                  name="./analystEmail"
+                                                  required="{Boolean}true" />
+
+                                    <analystNumber jcr:primaryType="nt:unstructured"
+                                                   sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                                   emptyText="Give Analyst Number"
+                                                   fieldLabel="Analyst Number"
+                                                   name="./analystNumber"
+                                                   required="{Boolean}true" />
+
+                                </items>
+                            </field>
+
+                        </items>
+                    </column>
+                </items>
+            </tab>
+        </items>
+    </content>
+</jcr:root>
