@@ -1,1 +1,4 @@
-cq-dialog-checkbox-showhide
+granite: class cq-dialog-checkbox-showhide
+
+granite:data  	
+cq-dialog-checkbox-showhide-target  value .checkbox-showhide-target
