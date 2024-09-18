@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+          xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          jcr:primaryType="nt:unstructured"
+          sling:resourceType="cq/gui/components/authoring/dialog"
+          jcr:title="BE Pop-up Card">
+    
+    <content jcr:primaryType="nt:unstructured"
+             sling:resourceType="granite/ui/components/coral/foundation/tabbed">
+        
+        <items jcr:primaryType="nt:unstructured">
+            
+            <cardDetails jcr:primaryType="nt:unstructured"
+                         jcr:title="Card Details"
+                         sling:resourceType="granite/ui/components/coral/foundation/fixedcolumns">
+                
+                <items jcr:primaryType="nt:unstructured">
+                    
+                    <variation jcr:primaryType="nt:unstructured"
+                               granite:class="dialog-dropdown-showhide"
+                               sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                               fieldLabel="Variation"
+                               name="./variation">
+                        
+                        <items jcr:primaryType="nt:unstructured">
+                            <fullCardLink jcr:primaryType="nt:unstructured"
+                                          text="Full Card as link"
+                                          value="fullCardLink"/>
+                            <fullCardButton jcr:primaryType="nt:unstructured"
+                                            text="Full Card as button"
+                                            value="fullCardButton"/>
+                            <cardWithButtons jcr:primaryType="nt:unstructured"
+                                             text="Card with Buttons"
+                                             value="cardWithButtons"/>
+                            <cardWithPodcast jcr:primaryType="nt:unstructured"
+                                             text="Card with Podcast"
+                                             value="cardWithPodcast"/>
+                        </items>
+                    </variation>
+
+                    <header jcr:primaryType="nt:unstructured"
+                            sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                            fieldLabel="Header"
+                            name="./header"/>
+
+                    <description jcr:primaryType="nt:unstructured"
+                                 sling:resourceType="cq/gui/components/authoring/dialog/richtext"
+                                 fieldLabel="Description"
+                                 name="./description"
+                                 removeSingleParagraphContainer="{Boolean}true"
+                                 useFixedInlineToolbar="{Boolean}true"/>
+
+                    <hideInAggregator jcr:primaryType="nt:unstructured"
+                                      sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                      fieldLabel="Hide in Aggregator"
+                                      name="./hideInAggregator"
+                                      text="Hide in Aggregator"
+                                      value="true"/>
+                    
+                    <hideInMobileApp jcr:primaryType="nt:unstructured"
+                                     sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                     fieldLabel="Hide in Mobile App"
+                                     name="./hideInMobileApp"
+                                     value="true"/>
+
+                    <interactive jcr:primaryType="nt:unstructured"
+                                 sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                 fieldLabel="Make Interactive"
+                                 name="./interactive"
+                                 value="true"/>
+
+                    <accent jcr:primaryType="nt:unstructured"
+                            sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                            fieldLabel="Accent Color"
+                            name="./accent"
+                            description="Add accent color name (e.g., chart-color-1). Leave empty if not needed."/>
+                    
+                    <image jcr:primaryType="nt:unstructured"
+                           sling:resourceType="cq/gui/components/authoring/dialog/fileupload"
+                           fieldLabel="Image"
+                           name="./image/file"
+                           allowUpload="{Boolean}true"
+                           fileNameParameter="./image/fileName"
+                           fileReferenceParameter="./image/fileReference"
+                           cropParameter="./image/imageCrop"
+                           mapParameter="./image/imageMap"
+                           rotateParameter="./image/imageRotate"/>
+
+                    <alternativeText jcr:primaryType="nt:unstructured"
+                                     sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                     fieldLabel="Alternative Text"
+                                     name="./image/alternativeText"
+                                     description="Provide a textual alternative for the image content"/>
+
+                    <imageLocation jcr:primaryType="nt:unstructured"
+                                   sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                   fieldLabel="Image Location"
+                                   name="./imageLocation"
+                                   value="no-image">
+                        
+                        <items jcr:primaryType="nt:unstructured">
+                            <noimage jcr:primaryType="nt:unstructured"
+                                     text="No Image"
+                                     value="no-image"/>
+                            <imageOnTop jcr:primaryType="nt:unstructured"
+                                        text="Image on Top"
+                                        value="image-on-top"/>
+                            <imageOnBottom jcr:primaryType="nt:unstructured"
+                                           text="Image on Bottom"
+                                           value="image-on-bottom"/>
+                            <backgroundImage jcr:primaryType="nt:unstructured"
+                                             text="Background Image"
+                                             value="background-image"/>
+                        </items>
+                    </imageLocation>
+
+                    <link jcr:primaryType="nt:unstructured"
+                          sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"
+                          fieldLabel="Card Link"
+                          name="./cardLink"/>
+
+                    <target jcr:primaryType="nt:unstructured"
+                            sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                            fieldLabel="Target"
+                            name="./target"
+                            value="_self">
+                        
+                        <items jcr:primaryType="nt:unstructured">
+                            <currentWindow jcr:primaryType="nt:unstructured"
+                                           text="Current Window"
+                                           value="_self"/>
+                            <newTab jcr:primaryType="nt:unstructured"
+                                    text="New Tab"
+                                    value="_blank"/>
+                            <popupWindow jcr:primaryType="nt:unstructured"
+                                         text="Popup Window"
+                                         value="popup"/>
+                        </items>
+                    </target>
+                    
+                </items>
+            </cardDetails>
+
+            <footer jcr:primaryType="nt:unstructured"
+                    sling:resourceType="granite/ui/components/coral/foundation/fixedcolumns">
+                
+                <items jcr:primaryType="nt:unstructured">
+                    
+                    <ignoreFooter jcr:primaryType="nt:unstructured"
+                                  sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                  fieldLabel="Ignore Card Footer"
+                                  name="./ignoreFooter"
+                                  value="true"/>
+
+                    <podcastHtml jcr:primaryType="nt:unstructured"
+                                 granite:class="hide"
+                                 sling:resourceType="granite/ui/components/coral/foundation/form/textarea"
+                                 fieldLabel="Podcast Snippet"
+                                 name="./podcastHtml"
+                                 granite:data="cardWithPodcast"/>
+                    
+                </items>
+            </footer>
+            
+        </items>
+    </content>
+</jcr:root>
