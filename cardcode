@@ -1,0 +1,223 @@
+package com.etrade.cms.common.sling.models;
+
+import com.day.cq.wcm.api.Page;
+import com.day.cq.wcm.api.PageManager;
+import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.models.annotations.DefaultInjectionStrategy;
+import org.apache.sling.models.annotations.Model;
+import org.apache.sling.models.annotations.injectorspecific.InjectionStrategy;
+import org.apache.sling.models.annotations.injectorspecific.Self;
+import org.apache.sling.models.annotations.injectorspecific.ValueMapValue;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
+import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.PostConstruct;
+import javax.jcr.Session;
+
+@Model(
+    adaptables = Resource.class,
+    adapters = BeCardModel.class,
+    defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL
+)
+public class BeCardModel {
+
+    public static final String PARENT_JCR_NODE = "/jcr:content/richTextEditor";
+    private static final Logger LOG = LoggerFactory.getLogger(BeCardModel.class);
+
+    @ValueMapValue(name = "et:targetSegment", injectionStrategy = InjectionStrategy.OPTIONAL)
+    private String targetSegment;
+
+    @ValueMapValue(name = "et:interactive", injectionStrategy = InjectionStrategy.OPTIONAL)
+    private String interactive;
+
+    @ValueMapValue(name = "et:hideInMobileApp", injectionStrategy = InjectionStrategy.OPTIONAL)
+    private String hideInMobileApp;
+
+    @ValueMapValue(name = "et:imageLocation", injectionStrategy = InjectionStrategy.OPTIONAL)
+    private String imageLocation;
+
+    @ValueMapValue(name = "et:disclosureLink", injectionStrategy = InjectionStrategy.OPTIONAL)
+    private String disclosureLink;
+
+    @ValueMapValue(name = "et:description", injectionStrategy = InjectionStrategy.OPTIONAL)
+    private String description;
+
+    @ValueMapValue(name = "et:beCardFooter", injectionStrategy = InjectionStrategy.OPTIONAL)
+    private String beCardFooter;
+
+    @Self
+    private Resource resource;
+
+    @Self
+    private SlingHttpServletRequest slingHttpServletRequest;
+
+    private String desc;
+    private String footer;
+    private String cardBodyClasses = "card-body";
+    private String cardClasses = "card";
+    private String[] disclosureLinks;
+    private String[] middleDisclosures;
+
+    private ResourceResolver resourceResolver;
+
+    @PostConstruct
+    protected void init() {
+        resourceResolver = resource.getResourceResolver();
+
+        try {
+            LOG.info("BeCardModel initialization started");
+
+            // Set target segment-specific classes
+            if (targetSegment != null && !targetSegment.isEmpty()) {
+                LOG.info("Target Segment: {}", targetSegment);
+                if (targetSegment.equals("logged-in")) {
+                    cardClasses += " content-customer";
+                } else if (targetSegment.equals("non-logged-in")) {
+                    cardClasses += " content-prospect";
+                }
+            }
+
+            // Set interactive class if applicable
+            if (interactive != null && interactive.equals("true")) {
+                LOG.info("Interactive: true");
+                cardClasses += " card-interactive";
+            }
+
+            // Hide in mobile app if applicable
+            if (hideInMobileApp != null && hideInMobileApp.equals("true")) {
+                LOG.info("HideInMobileApp: True");
+                cardClasses += " hideBeCardInMobileApp";
+            }
+
+            // Set image location-specific classes
+            if (imageLocation != null && !imageLocation.isEmpty()) {
+                LOG.info("Image Location: {}", imageLocation);
+                if (imageLocation.equals("image-on-bottom")) {
+                    cardBodyClasses += " vertical-offset-sm";
+                } else if (imageLocation.equals("background-image")) {
+                    cardBodyClasses += " text-white small-header";
+                    cardClasses = cardClasses.replace("card-primary", "card-background-image")
+                                             .replace("card-secondary", "card-background-image");
+                }
+            }
+
+            // Get current page and properties
+            PageManager pageManager = resourceResolver.adaptTo(PageManager.class);
+            Page currentPage = pageManager.getContainingPage(resource);
+            LOG.info("Current Page PATH: {}", currentPage.getPath());
+
+            middleDisclosures = currentPage.getProperties().get("et:middleDisclosureList", new String[]{});
+
+            // Process description and footer content
+            desc = getContentWithDisclosures(description);
+            footer = getContentWithDisclosures(beCardFooter);
+
+            // Log the final `desc` value
+            LOG.info("Final Description: {}", desc);
+
+            LOG.info("BeCardModel initialization complete");
+        } catch (Exception e) {
+            LOG.error("Exception in BeCardModel: {}", e.getMessage(), e);
+        }
+    }
+
+    private String getContentWithDisclosures(String content) {
+        LOG.info("Processing Disclosure Content...");
+        if (disclosureLinks != null && disclosureLinks.length > 0 &&
+            middleDisclosures != null && middleDisclosures.length > 0) {
+
+            Document doc = Jsoup.parse(content, "", Parser.xmlParser());
+            Elements supElements = doc.select("sup");
+            int index = 0;
+
+            for (Element sup : supElements) {
+                String supContent = sup.html();
+                if (supContent.contains(",")) {
+                    String[] temp = supContent.split(",");
+                    StringBuilder replacement = new StringBuilder();
+
+                    for (String part : temp) {
+                        if (index < disclosureLinks.length) {
+                            int supNum = getDisclosureNumber(disclosureLinks[index], middleDisclosures);
+                            String tempRep = supNum > 0 ? Integer.toString(supNum) : part;
+                            if (replacement.length() == 0) {
+                                replacement.append(tempRep);
+                            } else {
+                                replacement.append(",").append(tempRep);
+                            }
+                            index++;
+                        } else {
+                            if (replacement.length() == 0) {
+                                replacement.append(part);
+                            } else {
+                                replacement.append(",").append(part);
+                            }
+                        }
+                    }
+
+                    sup.html(replacement.toString());
+                } else {
+                    if (index < disclosureLinks.length) {
+                        int supNum = getDisclosureNumber(disclosureLinks[index], middleDisclosures);
+                        if (supNum > 0) {
+                            sup.html(Integer.toString(supNum));
+                        }
+                        index++;
+                    }
+                }
+            }
+
+            LOG.info("Processed Content: {}", doc.html());
+            return doc.html();
+        }
+        return content;
+    }
+
+    private int getDisclosureNumber(String disclosureLink, String[] middleDisclosures) {
+        LOG.info("Getting Disclosure Number for: {}", disclosureLink);
+        int num = 0;
+
+        try {
+            Session session = resourceResolver.adaptTo(Session.class);
+            for (String middlePagePath : middleDisclosures) {
+                String middleComputedPath = middlePagePath + PARENT_JCR_NODE;
+
+                if (session.nodeExists(middleComputedPath)) {
+                    num++;
+                    if (middlePagePath.equals(disclosureLink)) {
+                        return num;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("Error in getDisclosureNumber: {}", e.getMessage(), e);
+        }
+
+        return num;
+    }
+
+    public String getDesc() {
+        LOG.info("getDesc called, returning: {}", desc);
+        return desc;
+    }
+
+    public String getFooter() {
+        LOG.info("getFooter called, returning: {}", footer);
+        return footer;
+    }
+
+    public String getCardBodyClasses() {
+        return cardBodyClasses;
+    }
+
+    public String getCardClasses() {
+        return cardClasses;
+    }
+}
