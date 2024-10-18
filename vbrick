@@ -201,3 +201,6 @@ public class VBrickUrlUpdaterServiceImpl implements VBrickUrlUpdaterService {
             String message = "Updated VBrick Video ID to " + videoId + " for page: " + currentPage;
             
             pageManager.createRevision(page, label, message);
+
+pageManager.createRevision(page, String.format("Updated VBrick ID: %s", videoId), String.format("Updated VBrick ID to New one: %s", videoId));
+
