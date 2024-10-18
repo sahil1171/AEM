@@ -1,0 +1,3 @@
+String versionMessage = String.format("Updated VBrick ID to %s", newVideoId);
+            pageManager.createRevision(page, versionMessage, "VBrick Video ID updated.");
+            return true;
