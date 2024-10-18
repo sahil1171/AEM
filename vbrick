@@ -1,3 +1,198 @@
- String label = "Updated VBrick ID: " + videoId;
-            String message = "Updated VBrick ID to " + videoId + " for this page.";
-            pageManager.createRevision(page, label, message);
+@Component(
+    immediate = true,
+    service = VBrickUrlUpdaterService.class,
+    configurationPolicy = ConfigurationPolicy.OPTIONAL
+)
+public class VBrickUrlUpdaterServiceImpl implements VBrickUrlUpdaterService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(VBrickUrlUpdaterServiceImpl.class);
+    private static final String RESOURCE_PATH = "/content/etrade/retail/en_US";
+    private static final String SLING_RESOURCE_TYPE = "sling:resourceType";
+    private static final String COMPONENT_PATH = "responsive-etrade/components/specific/video";
+    private static final String COMPONENT_PROPERTY_VARIANT_TYPE = "et:variantType";
+    private static final String COMPONENT_PROPERTY_GRID_VIDEO_PLAYER = "gridVideoPlayer";
+    private static final String COMPONENT_PROPERTY_SINGLE_VIDEO_PLAYER = "singleVideoPlayer";
+    private static final String COMPONENT_PROPERTY_VIDEO_PLAYER = "video";
+    private static final String DATA_VIDEO_ID = "et:dataVideoId";
+    private static final String V_BRICK_VIDEO_ID = "et:vbrickVideoId";
+    private static final String VBRICK_ACCENT_COLOR = "et:vbrickVideoAccentColor";
+    private static final String PLAYLIST_ID = "et:dataVideoplaylistId";
+    private static final String JCR_CONTENT = "/jcr:content";
+    private static final String DAM_CSV_PATH = "/content/dam/etrade/vbrickfile/vbrick_data.csv";
+    private static final String DATE_FORMAT = "yyyy_MM_dd_HH_mm_ss";
+    private static final String MAX_ROW = "et:maxrow";
+    private static final String LAYOUT_PROP = "et:layout";
+    private static final String V_BRICK_VIDEO = "vbrick-video";
+    private static final String LAST_PUBLISHED_DATE = "et:datePublished";
+    private static final String LAST_REPLICATION_ACTION = "cq:lastReplicationAction";
+    private static final String LAST_MODIFIED_DATE = "jcr:lastmodified";
+    private static final String GRID = "grid";
+    private static final String SINGLE = "single";
+    private static final String REPORT_NAME = "/etrade/tmp/vBrickReport_";
+    private static final String FULL_REPORT_NAME = "/etrade/tmp/vBrickReportFull_";
+    private static final String V_BRICK_ACCENT_COLOR_VALUE = "6f8ec7";
+    private static final String MAX_ROW_COUNT = "6";
+    private static final String JCR_TITLE = "jcr:title";
+    private static final String LAST_REPLICATED = "cq:lastReplicated";
+    private static final String LAST_MODIFIED = "cq:lastModified";
+    private static final String LAST_MODIFIED_BY = "cq:lastModifiedBy";
+
+    @Reference
+    private QueryBuilder queryBuilder;
+
+    @Reference
+    private ResourceResolverFactory resourceResolverFactory;
+
+    @Override
+    public Map<String, String> createTextSearchQuery(String gridAndVideo) {
+        Map<String, String> queryMap = new HashMap<>();
+        queryMap.put("path", RESOURCE_PATH);
+        queryMap.put("1_property", SLING_RESOURCE_TYPE);
+        queryMap.put("1_property.value", COMPONENT_PATH);
+        queryMap.put("group.2_property", COMPONENT_PROPERTY_VARIANT_TYPE);
+        queryMap.put("group.2_property.1_value", COMPONENT_PROPERTY_GRID_VIDEO_PLAYER);
+        queryMap.put("group.2_property.2_value", COMPONENT_PROPERTY_SINGLE_VIDEO_PLAYER);
+        queryMap.put("group.2_property.value", COMPONENT_PROPERTY_VIDEO_PLAYER);
+        queryMap.put("p.limit", "-1");
+        LOG.debug("QueryMap: {}", queryMap);
+        return queryMap;
+    }
+
+    @Override
+    public String getResultFromQuery(ResourceResolver resourceResolver) {
+        String filePath = "";
+        HashMap<String, Boolean> pageVersionFlag = new HashMap<>();
+        ArrayList<VBrickReportPojo> vBrickReports = new ArrayList<>();
+
+        Session session = resourceResolver.adaptTo(Session.class);
+        Query query = queryBuilder.createQuery(PredicateGroup.create(createTextSearchQuery("grid")), session);
+        SearchResult result = query.getResult();
+
+        try {
+            List<Hit> hits = result.getHits();
+            LOG.debug("Results: {}", hits.size());
+
+            if (!hits.isEmpty()) {
+                // Read CSV file from DAM
+                HashMap<String, String> csvFileData = readCsvFileFromDam(resourceResolver);
+                LOG.debug("CSV File Data: {}", csvFileData);
+
+                for (Hit hit : hits) {
+                    Resource resource = hit.getResource();
+                    LOG.debug("Resource Path from HITS: {}", resource.getPath());
+                    ValueMap videoProperties = resource.adaptTo(ValueMap.class);
+                    String variantType = videoProperties.get(COMPONENT_PROPERTY_VARIANT_TYPE, String.class);
+
+                    if (GRID.equalsIgnoreCase(variantType) || SINGLE.equalsIgnoreCase(variantType)) {
+                        String oldVideoId = videoProperties.get(DATA_VIDEO_ID, String.class);
+                        String newVideoId = csvFileData.getOrDefault(oldVideoId, "");
+                        LOG.debug("New Video ID: {} | Old Video ID: {}", newVideoId, oldVideoId);
+
+                        if (!newVideoId.isEmpty()) {
+                            // Add page to flag list to create version
+                            String currentPage = resource.getPath().split(JCR_CONTENT)[0];
+                            Boolean pageVerFlag = pageVersionFlag.getOrDefault(currentPage, false);
+                            if (!pageVerFlag) {
+                                createVersionOfPage(resourceResolver, currentPage, newVideoId);  // Pass videoId here
+                                pageVersionFlag.put(currentPage, true);
+                            }
+                            setAndUpdateProperties(session, resource, variantType, newVideoId);
+                        }
+                    }
+                }
+
+                // Export report in CSV format
+                filePath = exportReport(vBrickReports);
+            }
+
+        } catch (IOException | RepositoryException e) {
+            LOG.error("VBrickUrlUpdaterServiceImpl | getResultFromQuery: EXCEPTION", e);
+        }
+
+        return filePath;
+    }
+
+    private HashMap<String, String> readCsvFileFromDam(ResourceResolver resourceResolver) throws IOException {
+        Resource damCsvFile = resourceResolver.getResource(DAM_CSV_PATH);
+        Asset asset = damCsvFile.adaptTo(Asset.class);
+        Rendition original = asset.getOriginal();
+        InputStream content = original.adaptTo(InputStream.class);
+        BufferedReader br = new BufferedReader(new InputStreamReader(content, StandardCharsets.UTF_8));
+
+        HashMap<String, String> csvFileData = new HashMap<>();
+        String line;
+        while ((line = br.readLine()) != null) {
+            String[] lineArray = line.split(",");
+            if (lineArray.length >= 2) {
+                String dataVideoId = lineArray[0].trim();
+                String vbVideoId = lineArray[1].trim();
+                csvFileData.put(dataVideoId, vbVideoId);
+            }
+        }
+
+        return csvFileData;
+    }
+
+    private void setAndUpdateProperties(Session session, Resource resource, String variantType, String newVideoId) throws RepositoryException {
+        String videoNodePath = resource.getPath();
+        Node videoNode = session.getNode(videoNodePath);
+        LOG.debug("Update properties for resource path: {}", videoNodePath);
+
+        if (GRID.equalsIgnoreCase(variantType)) {
+            videoNode.setProperty(MAX_ROW, MAX_ROW_COUNT);
+            videoNode.setProperty(LAYOUT_PROP, GRID);
+        } else if (SINGLE.equalsIgnoreCase(variantType)) {
+            videoNode.setProperty(LAYOUT_PROP, SINGLE);
+        }
+        videoNode.setProperty(V_BRICK_VIDEO_ID, newVideoId);
+        session.save();
+    }
+
+    private boolean createVersionOfPage(ResourceResolver resourceResolver, String currentPage, String videoId) {
+        PageManager pageManager = resourceResolver.adaptTo(PageManager.class);
+        Page page = pageManager.getPage(currentPage);
+
+        try {
+            if (page != null) {
+                String label = "Updated VBrick ID: " + videoId;
+                String message = "Updated VBrick ID to " + videoId + " for this page.";
+                pageManager.createRevision(page, label, message);
+                return true;
+            }
+        } catch (WCMException e) {
+            LOG.error("VBrickUrlUpdaterServiceImpl | createVersionOfPage: EXCEPTION", e);
+        }
+        return false;
+    }
+
+    private String exportReport(ArrayList<VBrickReportPojo> vBrickReports) throws IOException {
+        StringBuilder csvBuilder = new StringBuilder();
+        csvBuilder.append("Page Full Path of Component, Old Video ID, Page Status\n");
+
+        for (VBrickReportPojo vBrickReport : vBrickReports) {
+            csvBuilder.append(updateWithQuotes(vBrickReport.getPage())).append(",");
+            csvBuilder.append(vBrickReport.getFullPathToComponentNode()).append(",");
+            csvBuilder.append(vBrickReport.getVideoIDUsedForLookup()).append(",");
+            csvBuilder.append(vBrickReport.getPageActivatedOrDeactivated()).append("\n");
+        }
+
+        File myFile = new File(fileName(REPORT_NAME) + ".csv");
+        try (FileWriter writer = new FileWriter(myFile)) {
+            writer.write(csvBuilder.toString());
+        }
+
+        String absolutePath = myFile.getAbsolutePath();
+        LOG.debug("FILE Has Been Created: {}", absolutePath);
+        return absolutePath;
+    }
+
+    private String fileName(String fileName) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+        return fileName + dateFormat.format(new Date());
+    }
+
+    private String updateWithQuotes(String string) {
+        return "\"" + (string != null ? string : "") + "\"";
+    }
+}
+
