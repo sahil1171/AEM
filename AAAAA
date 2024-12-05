@@ -1,0 +1,30 @@
+@Model(adaptables = Resource.class)
+public class VideoComponent {
+    @Inject @Optional
+    private String displayFields;
+
+    @Inject @Optional
+    private String videoTitle;
+
+    @Inject @Optional
+    private String videoDuration;
+
+    @Inject @Optional
+    private String videoDescription;
+
+    public boolean showTitle() {
+        return "title".equals(displayFields) || "titleAndDuration".equals(displayFields) || "all".equals(displayFields);
+    }
+
+    public boolean showDuration() {
+        return "duration".equals(displayFields) || "titleAndDuration".equals(displayFields) || "all".equals(displayFields);
+    }
+
+    public boolean showDescription() {
+        return "description".equals(displayFields) || "all".equals(displayFields);
+    }
+
+    public String getVideoTitle() { return videoTitle; }
+    public String getVideoDuration() { return videoDuration; }
+    public String getVideoDescription() { return videoDescription; }
+}
