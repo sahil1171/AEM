@@ -1,0 +1,107 @@
+SERVICE :-
+package com.adobe.aem.aemtraining.core.services;
+
+
+
+public interface EmployeeInformation {
+	
+	public String getFullname();
+	public String getEmailid();
+	public String getGender();
+	public String getCity();
+	
+
+}
+
+MODEL CLASS:-
+
+package com.adobe.aem.aemtraining.core.models;
+
+
+
+import javax.annotation.Resource; 
+import javax.inject.Inject; 
+import org.apache.sling.api.SlingHttpServletRequest; 
+import org.apache.sling.models.annotations.Default; 
+import org.apache.sling.models.annotations.DefaultInjectionStrategy; 
+import org.apache.sling.models.annotations.Model; 
+import org.apache.sling.models.annotations.Via; 
+import org.apache.sling.models.annotations.injectorspecific.ValueMapValue; 
+import org.slf4j.Logger; 
+import org.slf4j.LoggerFactory;
+
+import com.adobe.aem.aemtraining.core.services.EmployeeInformation;
+
+@Model(adaptables = {Resource.class,SlingHttpServletRequest.class},
+adapters = EmployeeInformation.class,
+defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL)
+
+public class EmployeeInformationModel implements EmployeeInformation {
+	private final Logger logger = LoggerFactory.getLogger(getClass()); 
+
+	@ValueMapValue 
+	@Default(values = "Vinayak") 
+	String fullname;
+	 
+	@Inject 
+	@Via("resource") 
+	String emailid; 
+
+	@Inject 
+	@Via("resource") 
+	String gender; 
+	
+	@ValueMapValue 
+	String city;
+	
+	
+	@Override
+	public String getFullname() {
+		logger.debug(" Enter full name : {} ",fullname);
+		return fullname;
+	}
+	@Override
+	public String getEmailid() {
+		// TODO Auto-generated method stub
+		logger.debug(" Enter emailid : {} ",emailid);
+		return emailid;
+	}
+	@Override
+	public String getGender() {
+		// TODO Auto-generated method stub
+		logger.debug(" Enter gender : {} ", gender);
+		return gender;
+	}
+	@Override
+	public String getCity() {
+		// TODO Auto-generated method stub
+		logger.debug(" Enter city: {} ",city);
+		return city;
+	} 
+	
+	
+	
+}
+
+
+HTML FILE
+
+
+<h1> Employee Information </h1>
+<div class="cmp-employeeinformation" data-sly-use.empinfo="com.adobe.aem.aemtraining.core.models.EmployeeInformationModel">
+<div>
+<pre class="cmp-employeeinformation-fullName"> Full Name: ${empinfo.fullname} </pre>
+</div>
+<div>
+<pre class="cmp-employeeinformation-fullName"> Email ID: ${empinfo.emailid} </pre>
+</div>
+<div>
+<pre class="cmp-employeeinformation-fullName"> Gender: ${empinfo.gender} </pre>
+</div>
+<div>
+<pre class="cmp-employeeinformation-fullName"> City: ${empinfo.city} </pre>
+</div>
+</div>
+
+
+
