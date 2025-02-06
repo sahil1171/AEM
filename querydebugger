@@ -1,0 +1,12 @@
+path=/content/etrade/retail/en_US/pages/l/f
+type=cq:Page
+1_property=jcr:content/jcr:title
+1_property.value=*
+2_property=jcr:content/cq:lastReplicationAction
+2_property.value=*
+3_property=jcr:content/cq:lastModifiedBy
+3_property.value=*
+4_property=jcr:content/redirectTarget
+4_property.value=*
+p.hits=full
+p.limit=-1
